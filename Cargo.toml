@@ -39,6 +39,7 @@ memcached = ["dep:memcache"]
 memcached-tls = ["memcache/tls"]  # Requires openssl
 
 [dev-dependencies]
+cargo-husky = { version = "1.5", default-features = false, features = ["user-hooks"] }
 tokio = { version = "1.52", features = ["rt-multi-thread", "macros", "sync", "time", "net", "io-util", "fs", "test-util"] }
 
 # Docker-gated container helpers for integration tests. The tests self-skip when
