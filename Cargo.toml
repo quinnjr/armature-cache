@@ -3,6 +3,7 @@ name = "armature-cache"
 version = "0.4.0"
 edition.workspace = true
 rust-version.workspace = true
+autobenches = false  # Disable auto-discovery, use explicit [[bench]] only
 authors.workspace = true
 license.workspace = true
 repository = "https://github.com/quinnjr/armature-cache"
@@ -39,6 +40,7 @@ memcached = ["dep:memcache"]
 memcached-tls = ["memcache/tls"]  # Requires openssl
 
 [dev-dependencies]
+criterion = { version = "0.8", features = ["html_reports", "async_tokio"] }
 cargo-husky = { version = "1.5", default-features = false, features = ["user-hooks"] }
 tokio = { version = "1.52", features = ["rt-multi-thread", "macros", "sync", "time", "net", "io-util", "fs", "test-util"] }
 
@@ -49,3 +51,8 @@ armature-testkit = { path = "../armature-testkit", features = ["containers"] }
 # `memcached` container (testcontainers-modules has no memcached module).
 testcontainers = "0.27.3"
 
+# Explicit bench targets only: a stray file under benches/ should not silently
+# become a target.
+[[bench]]
+name = "cache"
+harness = false
