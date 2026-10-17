@@ -36,7 +36,10 @@ impl RedisCache {
     /// }
     /// ```
     pub async fn new(config: CacheConfig) -> CacheResult<Self> {
-        debug!("Connecting to Redis cache: {}", config.url);
+        debug!(
+            "Connecting to Redis cache: {}",
+            crate::config::redact_url_for_logging(&config.url)
+        );
         let client =
             Client::open(config.url.as_str()).map_err(|e| CacheError::Connection(e.to_string()))?;
 
