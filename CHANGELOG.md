@@ -9,6 +9,8 @@ Earlier changes are recorded in the workspace [`CHANGELOG.md`](../CHANGELOG.md).
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-10-17
+
 ### Security
 
 - `CacheConfig`'s `Debug` output and the Redis "connecting" log line no longer print credentials embedded in the connection URL (`redis://user:pass@host` is rendered as `redis://***@host`).
