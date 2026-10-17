@@ -13,7 +13,11 @@ pub enum CacheBackend {
 }
 
 /// Cache configuration.
-#[derive(Debug, Clone)]
+///
+/// The `Debug` impl redacts any `user:password@` userinfo embedded in
+/// [`url`](Self::url), so a config can be logged or `{:?}`-printed without
+/// leaking backend credentials.
+#[derive(Clone)]
 pub struct CacheConfig {
     /// Cache backend type
     pub backend: CacheBackend,
@@ -35,6 +39,41 @@ pub struct CacheConfig {
 
     /// Maximum number of connections (for connection pools)
     pub max_connections: usize,
+}
+
+impl std::fmt::Debug for CacheConfig {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("CacheConfig")
+            .field("backend", &self.backend)
+            .field("url", &redact_url_for_logging(&self.url))
+            .field("key_prefix", &self.key_prefix)
+            .field("default_ttl", &self.default_ttl)
+            .field("connection_timeout", &self.connection_timeout)
+            .field("operation_timeout", &self.operation_timeout)
+            .field("max_connections", &self.max_connections)
+            .finish()
+    }
+}
+
+/// Strip the userinfo (`user:pass@`) from a connection URL so it can be
+/// logged safely. Never log [`CacheConfig::url`] without passing it through
+/// this first: it may embed the backend password.
+///
+/// The *last* `@` inside the authority is used, so an unencoded `@` in the
+/// password does not leave part of the credentials behind.
+pub(crate) fn redact_url_for_logging(url: &str) -> String {
+    if let Some(scheme_end) = url.find("://") {
+        let after_scheme = scheme_end + 3;
+        let authority_end = url[after_scheme..]
+            .find(['/', '?', '#'])
+            .map(|i| after_scheme + i)
+            .unwrap_or(url.len());
+        if let Some(at) = url[after_scheme..authority_end].rfind('@') {
+            let host_start = after_scheme + at + 1;
+            return format!("{}***@{}", &url[..after_scheme], &url[host_start..]);
+        }
+    }
+    url.to_string()
 }
 
 impl CacheConfig {
@@ -130,6 +169,32 @@ impl CacheConfig {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn debug_redacts_url_credentials() {
+        let config = CacheConfig::redis("redis://admin:s3cr@t@cache.internal:6379/2").unwrap();
+        let rendered = format!("{config:?}");
+        assert!(!rendered.contains("s3cr"), "password leaked: {rendered}");
+        assert!(!rendered.contains("admin"), "username leaked: {rendered}");
+        assert!(rendered.contains("redis://***@cache.internal:6379/2"));
+    }
+
+    #[test]
+    fn redact_url_leaves_credential_free_urls_untouched() {
+        assert_eq!(
+            redact_url_for_logging("redis://localhost:6379"),
+            "redis://localhost:6379"
+        );
+        assert_eq!(
+            redact_url_for_logging("memcache://:pw@h:11211?timeout=1"),
+            "memcache://***@h:11211?timeout=1"
+        );
+        // An `@` after the authority (path/query) is not userinfo.
+        assert_eq!(
+            redact_url_for_logging("redis://h:6379/0?x=a@b"),
+            "redis://h:6379/0?x=a@b"
+        );
+    }
 
     #[test]
     fn test_redis_config() {
