@@ -9,6 +9,16 @@ Earlier changes are recorded in the workspace [`CHANGELOG.md`](../CHANGELOG.md).
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-10-17
+
+### Security
+
+- `CacheConfig`'s `Debug` output and the Redis "connecting" log line no longer print credentials embedded in the connection URL (`redis://user:pass@host` is rendered as `redis://***@host`).
+
+### Removed
+
+- **Breaking:** the `memcached-tls` feature. It enabled `memcache/tls`, whose only backend is OpenSSL, contradicting the framework's rustls-only TLS policy. With it gone `cargo tree -i openssl --all-features -p armature-cache` is empty. Migration: terminate TLS to memcached with a local proxy (e.g. stunnel) and connect over plain `memcache://` to it.
+
 ## [0.4.2] - 2026-09-15
 
 ### Changed
